@@ -1,11 +1,14 @@
 package com.example.autofix;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.text.Text;
 import net.minecraft.world.GameMode;
 
 public class AutoFixClient implements ClientModInitializer {
+    private boolean enabled = true;
     private int cooldown = 0;
     private int flyDelay = -1;
     private GameMode prevMode = null;
@@ -13,6 +16,16 @@ public class AutoFixClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        // команда /autofix включает и выключает мод
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+            dispatcher.register(ClientCommandManager.literal("autofix").executes(ctx -> {
+                enabled = !enabled;
+                ctx.getSource().sendFeedback(Text.literal(
+                        "[AutoFix] " + (enabled ? "ВКЛЮЧЁН" : "ВЫКЛЮЧЕН")));
+                return 1;
+            }))
+        );
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             var player = client.player;
             var im = client.interactionManager;
@@ -25,16 +38,22 @@ public class AutoFixClient implements ClientModInitializer {
             }
 
             if (!announced) {
-                player.sendMessage(Text.literal("[AutoFix] мод загружен"), false);
+                player.sendMessage(Text.literal(
+                        "[AutoFix] мод загружен, /autofix: вкл/выкл"), false);
                 announced = true;
             }
 
             GameMode mode = im.getCurrentGameMode();
             if (cooldown > 0) cooldown--;
 
+            if (!enabled) {
+                prevMode = mode;
+                flyDelay = -1;
+                return;
+            }
+
             if (flyDelay > 0 && --flyDelay == 0) {
                 player.networkHandler.sendChatCommand("fly");
-                player.sendMessage(Text.literal("[AutoFix] отправил /fly"), false);
             }
 
             if (cooldown == 0) {
@@ -46,8 +65,6 @@ public class AutoFixClient implements ClientModInitializer {
                         && !player.getAbilities().allowFlying;
 
                 if (becameSpectator || falling) {
-                    player.sendMessage(Text.literal("[AutoFix] сработало: "
-                            + (becameSpectator ? "/gm 3" : "падение")), false);
                     player.networkHandler.sendChatCommand("gm 1");
                     flyDelay = 10;
                     cooldown = 60;
