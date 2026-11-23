@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "autofix",
+  "version": "${version}",
+  "name": "AutoFix",
+  "description": "Автоматически возвращает creative и полёт после /gm 3 и /fly.",
+  "authors": ["you"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.example.autofix.AutoFixClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
